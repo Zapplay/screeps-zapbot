@@ -1,17 +1,36 @@
-var towers = {
-    run: function (tower) {
-        var closestDamagedStructure = tower.pos.findClosestByRange(FIND_STRUCTURES, {
-            filter: (structure) => structure.hits < structure.hitsMax
-        });
-        if (closestDamagedStructure) {
-            tower.repair(closestDamagedStructure);
-        }
+const wall_repair_limit = 300000;
 
-        var closestHostile = tower.pos.findClosestByRange(FIND_HOSTILE_CREEPS);
-        if (closestHostile) {
-            tower.attack(closestHostile);
+var towers = {
+    heal: function (room) {
+        
+        var towers = room.find(
+                FIND_MY_STRUCTURES, { filter: { structureType: STRUCTURE_TOWER } });
+            
+        
+        // repair any damaged structures to 5000 hits and repair containers to max hits
+        const targets = room.find(FIND_STRUCTURES, {
+            filter: object => (object.hits < object.hitsMax && object.hits < 5000) || (object.structureType == STRUCTURE_CONTAINER && object.hits < object.hitsMax)
+        });
+        
+        targets.sort((a,b) => a.hits - b.hits);
+            
+        if(targets.length > 0) {
+            towers.forEach(tower => tower.repair(targets[0]));
+        }
+        // repair walls to limit
+        else{
+            const targets = room.find(FIND_STRUCTURES, {
+            filter: object => (object.structureType == STRUCTURE_WALL && object.hits < wall_repair_limit) //object.hitsMax
+            });
+            
+            targets.sort((a,b) => a.hits - b.hits);
+                
+            if(targets.length > 0) {
+                towers.forEach(tower => tower.repair(targets[0]));
+            }
         }
     },
+
     //defense has two mods: 1 - every tower attacks nearest enemy and 0 - all towers attack one random enemy
     defend: function defendRoom(room, mode) {
         var hostiles = room.find(FIND_HOSTILE_CREEPS);
